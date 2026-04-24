@@ -1,0 +1,28 @@
+# Multi-source script example: load two frames, work on each, then join.
+#
+# Run with:  ./golars run examples/script/multisource.glr
+# or from the REPL:  .source examples/script/multisource.glr
+
+# Stage two sources without touching the focused pipeline.
+load examples/script/people.csv     as people
+load examples/script/salaries.csv   as salaries
+
+# List what we have so far - `focused` is still empty at this point.
+frames
+
+# Focus the people frame and filter it.
+use people
+filter age > 25
+
+# Switch to salaries; the people pipeline stays parked under its name.
+use salaries
+filter amount >= 50000
+
+# Join salaries with the parked `people` frame on `name`.
+join people on name inner
+
+# Collect + show the result.
+sort amount desc
+limit 5
+show
+# ^?

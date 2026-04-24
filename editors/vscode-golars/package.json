@@ -1,0 +1,72 @@
+{
+  "name": "vscode-golars",
+  "displayName": "golars",
+  "description": "Syntax highlighting, LSP client, and inline previews for .glr scripts.",
+  "version": "0.1.0",
+  "publisher": "gaurav-gosain",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Gaurav-Gosain/golars.git",
+    "directory": "editors/vscode-golars"
+  },
+  "engines": {
+    "vscode": "^1.84.0"
+  },
+  "categories": ["Programming Languages", "Data Science"],
+  "activationEvents": ["onLanguage:glr"],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "glr",
+        "aliases": ["golars", "GLR"],
+        "extensions": [".glr"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "glr",
+        "scopeName": "source.glr",
+        "path": "./syntaxes/glr.tmLanguage.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "golars.previewFrame",
+        "title": "golars: Preview focused frame"
+      },
+      {
+        "command": "golars.explainPlan",
+        "title": "golars: Explain plan"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "golars",
+      "properties": {
+        "golars.serverPath": {
+          "type": "string",
+          "default": "golars-lsp",
+          "description": "Path to the golars-lsp binary."
+        },
+        "golars.cliPath": {
+          "type": "string",
+          "default": "golars",
+          "description": "Path to the golars CLI (used for preview + explain commands)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.84.0",
+    "typescript": "^5.3.3",
+    "vscode-languageclient": "^9.0.1"
+  }
+}

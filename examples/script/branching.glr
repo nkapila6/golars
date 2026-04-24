@@ -1,0 +1,35 @@
+# Branching with stash + use
+#
+# `stash NAME` snapshots the current focus under NAME. `use NAME`
+# always starts from a clone of that snapshot, so you can branch a
+# pipeline without recomputing the shared prefix.
+#
+# Run with: ./golars run examples/script/branching.glr
+
+load examples/script/salaries.csv
+
+# Establish a shared base: every branch starts from the same filtered
+# set of high earners.
+filter amount >= 60000
+stash base
+# ^?
+
+# Branch 1: top two by amount.
+sort amount desc
+limit 2
+stash top_earners
+# ^?
+
+# Branch 2: same base, but sorted the other way for the bottom two.
+use base
+sort amount asc
+limit 2
+stash bottom_earners
+# ^?
+
+# Join branch 1 against branch 2 on `name` (cross) - a silly demo,
+# but it shows that stashed branches are independently usable.
+use top_earners
+join bottom_earners on name cross
+show
+# ^?

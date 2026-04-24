@@ -1,0 +1,116 @@
+---
+title: Getting Started
+description: Install golars, open the REPL, run a query.
+icon: Rocket
+---
+
+## Install as a library
+
+```sh
+go get github.com/Gaurav-Gosain/golars@latest
+```
+
+## Install the CLI
+
+```sh
+go install github.com/Gaurav-Gosain/golars/cmd/golars@latest
+```
+
+Type `golars help` to see every subcommand:
+
+```
+golars                       start interactive REPL
+golars run SCRIPT            execute a .glr script
+golars fmt [-w] FILE         canonicalize a .glr script
+golars lint FILE             report common .glr mistakes
+golars schema FILE           print column names + dtypes
+golars stats FILE            print describe() stats
+golars head FILE [N]         print first N rows (default 10)
+golars diff A B              show row-level diff between two files
+golars sql QUERY [FILE...]   run a SQL query against files
+golars browse FILE           interactive TUI table viewer
+golars explain SCRIPT        print the lazy plan
+```
+
+## Your first query
+
+Programmatically:
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+
+    "github.com/Gaurav-Gosain/golars/dataframe"
+    "github.com/Gaurav-Gosain/golars/expr"
+    "github.com/Gaurav-Gosain/golars/lazy"
+    "github.com/Gaurav-Gosain/golars/series"
+)
+
+func main() {
+    ctx := context.Background()
+
+    dept, _ := series.FromString("dept", []string{"eng", "eng", "sales", "ops"}, nil)
+    salary, _ := series.FromInt64("salary", []int64{100, 120, 80, 70}, nil)
+    df, _ := dataframe.New(dept, salary)
+    defer df.Release()
+
+    plan := lazy.FromDataFrame(df).
+        Filter(expr.Col("salary").Gt(expr.Lit(int64(75)))).
+        GroupBy("dept").
+        Agg(expr.Col("salary").Sum().Alias("total")).
+        Sort("total", true)
+
+    out, err := plan.Collect(ctx)
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer out.Release()
+    fmt.Println(out)
+}
+```
+
+From the shell:
+
+```sh
+# Read a CSV, describe it
+golars stats trades.csv
+
+# Run SQL against it
+golars sql "SELECT symbol, SUM(volume) AS vol FROM trades GROUP BY symbol ORDER BY vol DESC LIMIT 5" trades.csv
+
+# Interactively browse it
+golars browse trades.csv
+```
+
+## The REPL
+
+Run `golars` with no arguments to open the interactive REPL:
+
+```
+golars » load trades.csv
+ok  loaded trades.csv (1,234,567 × 6)
+
+golars » filter volume > 100
+ok  added FILTER to pipeline: col("volume") > 100
+
+golars » groupby symbol amount:sum:vol
+ok  added GROUP BY [symbol] with 1 aggs
+
+golars » sort vol desc
+ok  added SORT vol desc to pipeline
+
+golars » head 10
+```
+
+The REPL ships with inline ghost-text completions, command history, and tab completion for paths and column names.
+
+## Next
+
+<Cards>
+  <Card href="/docs/cookbook" title="Cookbook" description="End-to-end recipes." />
+  <Card href="/docs/scripting" title=".glr scripting" description="Automate from a script." />
+</Cards>

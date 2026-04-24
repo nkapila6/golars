@@ -1,0 +1,95 @@
+NOTICE
+======
+
+golars incorporates behavioural specifications derived from the
+test suites of several upstream projects, and uses portions of
+external UI / CLI designs as layout references. Where noted, Go
+test files were written against golars' own API using the
+referenced project's tests as a reference for edge cases, null
+handling, and corner cases. No code was copied verbatim unless
+explicitly called out below.
+
+-------------------------------------------------------------------
+polars - MIT License
+Copyright (c) 2020-present Ritchie Vink and contributors.
+Copyright (c) 2024 (Some portions) NVIDIA CORPORATION & AFFILIATES.
+Source: https://github.com/pola-rs/polars
+
+Behavioural parity tests derived from polars' test suite:
+
+  dataframe/concat_parity_test.go      <- tests/unit/dataframe/test_vstack.py
+  dataframe/null_count_parity_test.go  <- tests/unit/dataframe/test_null_count.py
+  dataframe/equals_parity_test.go      <- tests/unit/dataframe/test_equals.py
+  compute/filter_parity_test.go        <- tests/unit/operations/test_filter.py
+  compute/sort_parity_test.go          <- tests/unit/operations/test_sort.py
+  compute/cast_parity_test.go          <- tests/unit/operations/test_cast.py
+  compute/compare_parity_test.go       <- tests/unit/operations/test_comparison.py
+  compute/agg_parity_test.go           <- tests/unit/operations/aggregation/test_aggregations.py
+  series/series_parity_test.go         <- tests/unit/series/test_series.py
+  dataframe/join_parity_test.go        <- tests/unit/operations/test_join.py
+  dataframe/groupby_parity_test.go     <- tests/unit/operations/aggregation/test_aggregations.py (groupby subset)
+  dataframe/slice_parity_test.go       <- tests/unit/operations/test_slice.py
+  dataframe/rename_parity_test.go      <- tests/unit/operations/test_rename.py
+  dataframe/describe_parity_test.go    <- tests/unit/dataframe/test_describe.py
+  series/shift_parity_test.go          <- tests/unit/operations/test_shift.py
+  series/unique_parity_test.go         <- tests/unit/operations/unique/test_unique.py
+  series/fillnull_parity_test.go       <- tests/unit/operations/test_fill_null.py
+  series/dropnulls_parity_test.go      <- tests/unit/operations/test_drop_nulls.py
+  compute/take_parity_test.go          <- tests/unit/operations/test_gather.py
+  lazy/select_parity_test.go           <- tests/unit/operations/test_select.py, test_with_columns.py
+  series/isnull_parity_test.go         <- tests/unit/operations/test_is_null.py
+  series/valuecounts_parity_test.go    <- tests/unit/operations/test_value_counts.py
+  series/issorted_parity_test.go       <- tests/unit/operations/test_is_sorted.py
+
+Each ported Go test file carries a header comment naming the polars
+source file it parallels. Scenarios that require features golars
+does not yet implement (list dtype, categoricals, unpivot/explode,
+window functions, etc.) are skipped with a TODO note.
+
+-------------------------------------------------------------------
+sheets - MIT License
+Copyright (c) 2024 Maas Lalani
+Source: https://github.com/maaslalani/sheets
+
+The TUI browser in `browse/` borrows its grid layout (box-drawing
+borders, row-number gutter, column-letter header), modal state model
+(NORMAL / VISUAL / COMMAND / FILTER), and vim-style keybinding
+conventions from sheets. Implementation is original; no code is
+copied. Lookups for cells are wired through golars' Arrow buffers
+instead of an in-memory dense matrix.
+
+-------------------------------------------------------------------
+Apache Arrow / arrow-go - Apache 2.0 License
+Source: https://github.com/apache/arrow-go
+
+arrow-go is the only runtime dependency in the core packages. Every
+Series is an arrow.Array; every chunked operation routes through
+arrow.Chunked. golars does not wrap or reimplement arrow types.
+
+-------------------------------------------------------------------
+Charm stack - MIT License
+Source: https://github.com/charmbracelet/bubbletea,
+        https://github.com/charmbracelet/lipgloss,
+        https://github.com/charmbracelet/bubbles,
+        https://github.com/charmbracelet/vhs
+
+The REPL, TUI browser, LSP preview, and every animated demo in the
+README use Bubble Tea + Lipgloss. Demos are produced by VHS.
+
+-------------------------------------------------------------------
+BurntSushi/toml - MIT License
+Source: https://github.com/BurntSushi/toml
+
+Configuration loader for the CLI and LSP.
+
+-------------------------------------------------------------------
+Implementation techniques
+
+- Parallel radix partitioning shape (per-thread histograms + serial
+  prefix scan + parallel scatter) mirrors DuckDB's and polars's
+  published design, adapted to Arrow-backed buffers.
+- Block-quicksort's branchless partition concept (Edelkamp & Weiss)
+  informed the branchless scatter in compute/sort_radix.go; no
+  code copied.
+- American Flag Sort (McIlroy, Bostic, McIlroy) informed the in-place
+  MSD radix sketches in the design docs; the shipping path is LSD.

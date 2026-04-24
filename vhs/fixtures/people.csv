@@ -1,0 +1,13 @@
+id,name,dept,salary,tenure_years
+1,ada,eng,125000,4
+2,brian,eng,140000,7
+3,cleo,sales,95000,3
+4,dan,ops,88000,2
+5,eva,eng,165000,9
+6,finn,sales,110000,5
+7,gina,ops,92000,6
+8,hugo,eng,135000,4
+9,iris,sales,102000,2
+10,jake,ops,78000,1
+11,kira,eng,155000,8
+12,leo,sales,98000,3

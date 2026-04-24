@@ -1,0 +1,11 @@
+load examples/script/salaries.csv as salaries
+use salaries
+# ^?
+
+load examples/script/people.csv
+# ^?
+
+join salaries on name inner
+sort age desc
+filter age > 20
+# ^?

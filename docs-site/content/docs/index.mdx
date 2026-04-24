@@ -1,0 +1,62 @@
+---
+title: Introduction
+description: A pure-Go port of polars on top of arrow-go. Lazy plan, optimizer, streaming engine, SIMD kernels, no cgo.
+icon: House
+---
+
+**golars** is a pure-Go DataFrame library modeled on [polars](https://github.com/pola-rs/polars) and built directly on arrow-go. No cgo. Single `go build` cross-compiles.
+
+```go
+import (
+    "context"
+    "fmt"
+
+    "github.com/Gaurav-Gosain/golars/compute"
+    "github.com/Gaurav-Gosain/golars/dataframe"
+    "github.com/Gaurav-Gosain/golars/series"
+)
+
+ctx := context.Background()
+
+names, _ := series.FromString("name", []string{"ada", "brian", "carl"}, nil)
+ages, _ := series.FromInt64("age", []int64{27, 34, 19}, nil)
+df, _ := dataframe.New(names, ages)
+defer df.Release()
+
+mask, _ := compute.GtLit(ctx, ages, int64(20))
+adults, _ := df.Filter(ctx, mask)
+defer adults.Release()
+fmt.Println(adults)
+```
+
+## Highlights
+
+- **Eager + lazy execution.** Build pipelines as logical plans, let the optimizer fuse projections/filters, then `Collect(ctx)`.
+- **Streaming engine.** Morsel-driven execution for datasets that don't fit in memory.
+- **Polars-grade performance.** Matches or beats polars 1.39 on most polars-compare workloads.
+- **I/O included.** CSV, Parquet, IPC, JSON, NDJSON readers/writers; `io/sql` bridge for any `database/sql` driver.
+- **Scripting + REPL.** `.glr` scripts run via `golars run my.glr` or inside the interactive REPL with inline ghost-text completions.
+- **LLM-native.** MCP server exposes golars tools to Claude Desktop, Cursor, Windsurf, and other MCP hosts.
+
+## Install
+
+```sh
+go get github.com/Gaurav-Gosain/golars@latest
+```
+
+The CLI ships separately:
+
+```sh
+go install github.com/Gaurav-Gosain/golars/cmd/golars@latest
+```
+
+## Where next
+
+<Cards>
+  <Card href="/docs/getting-started" title="Getting Started" description="Install the library, open the REPL, run a query." />
+  <Card href="/docs/cookbook" title="Cookbook" description="End-to-end recipes: read, filter, group, write." />
+  <Card href="/docs/scripting" title=".glr scripting" description="The one-command-per-line pipeline language." />
+  <Card href="/docs/sql" title="SQL frontend" description="SELECT / FROM / WHERE / GROUP BY / ORDER BY / LIMIT." />
+  <Card href="/docs/mcp" title="MCP integration" description="Plug golars into Claude Desktop and co." />
+  <Card href="/docs/api-surface" title="API reference" description="polars to golars method-level status table." />
+</Cards>

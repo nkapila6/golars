@@ -1,0 +1,18 @@
+# golars script demo
+# Run with:  ./golars run examples/script/demo.glr
+#
+# Each line is a command applied to the current pipeline, same as
+# typing it at the REPL. The leading "." is optional.
+
+# Build a small frame from the bundled CSV (see examples/script/people.csv).
+load examples/script/people.csv
+
+# Inspect.
+schema
+show
+
+# Filter + sort lazily.
+filter age > 25
+sort age desc
+show
+# ^?

@@ -1,0 +1,4 @@
+solution,version,query_number,duration[s],io_type,scale_factor
+golars,0.1.0,1,0.092891,parquet,synthetic
+golars,0.1.0,6,0.017702,parquet,synthetic
+golars,0.1.0,1,0.090796,parquet,synthetic

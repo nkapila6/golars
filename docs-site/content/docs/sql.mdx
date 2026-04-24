@@ -1,0 +1,78 @@
+---
+title: SQL frontend
+description: "SELECT / FROM / WHERE / GROUP BY / ORDER BY / LIMIT — compiles to the same lazy plan as the Go API."
+icon: Database
+---
+
+`golars.sql` exposes a subset SQL frontend that compiles into the
+same lazy plan as the Go API. Run queries from the shell, from the
+REPL, or programmatically.
+
+## From the CLI
+
+```sh
+golars sql "SELECT dept, SUM(amount) AS total FROM sales GROUP BY dept ORDER BY total DESC" sales.csv
+```
+
+Each file becomes a table whose name is the filename stem. Multiple
+files register as separate tables so cross-file queries Just Work:
+
+```sh
+golars sql "SELECT t.*, s.name FROM trades t" trades.csv symbols.csv
+```
+
+## From Go
+
+```go
+import "github.com/Gaurav-Gosain/golars/sql"
+
+session := sql.NewSession()
+defer session.Close()
+session.Register("people", df)
+
+out, err := session.Query(ctx, "SELECT name FROM people WHERE age > 25")
+defer out.Release()
+```
+
+## Grammar
+
+```
+SELECT [DISTINCT] projection_list
+FROM table_name
+[WHERE predicate]
+[GROUP BY col_list]
+[ORDER BY col_list [ASC|DESC]]
+[LIMIT n]
+```
+
+`projection_list`:
+- `*`
+- `col[, col...]` (optionally each with `AS name`)
+- `agg(col)[, ...]` (agg: `SUM`, `MIN`, `MAX`, `AVG`, `MEAN`, `COUNT`, `FIRST`, `LAST`)
+- any mix of the above when there is a `GROUP BY`
+
+`predicate`:
+- `col OP value [AND|OR col OP value]...`
+- `OP` is one of `=`, `!=`, `<`, `<=`, `>`, `>=`
+
+`value`:
+- integer literal (`42`)
+- float literal (`3.14`)
+- single-quoted or double-quoted string (`'us'`, `"ops"`)
+- `true`, `false`
+
+## Limitations
+
+- No JOIN clause yet (use the `df.Join(...)` API directly).
+- No window functions (use `Expr.Over(keys...)` in Go).
+- No subqueries.
+- No arithmetic in SELECT expressions (use `WithColumns` in Go).
+
+All of these come free with golars' Go API; the SQL frontend
+focuses on what ad-hoc shell queries need.
+
+## From the MCP server
+
+`golars-mcp` exposes the same SQL compiler as a tool named `sql`.
+Host LLMs invoke it with `{query, files}` arguments. See
+[MCP integration](/docs/mcp).

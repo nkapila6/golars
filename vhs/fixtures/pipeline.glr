@@ -1,0 +1,5 @@
+load vhs/fixtures/people.csv
+filter salary > 100000
+groupby dept salary:sum:total salary:mean:avg tenure_years:max:max_tenure
+sort total desc
+head 5

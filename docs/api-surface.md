@@ -1,0 +1,275 @@
+# golars / polars API surface
+
+Last synced: 2026-04-24.
+
+Authoritative map between polars' Python API (`pl.*`) and golars' Go
+surface. Status column values:
+
+- `done` shipped and covered by tests
+- `partial` shipped for a common subset; documented gaps
+- `todo` not yet
+
+The package-level facade at the repo root (`import "github.com/Gaurav-Gosain/golars"`)
+re-exports the most commonly needed symbols so casual users do not need
+to know which sub-package each name lives in.
+
+## Top-level functions (`pl.*` / `golars.*`)
+
+| polars | golars | Status | Notes |
+|---|---|---|---|
+| `pl.DataFrame({...})` | `golars.FromMap(...)` | done | slice-of-go map constructor |
+| `pl.from_arrow(tbl)` | `dataframe.FromArrowTable(tbl)` | done | |
+| `pl.concat([...])` | `dataframe.Concat(...)` | done | vertical |
+| `pl.col(name)` | `golars.Col(name)` | done | also typed: `expr.C[T]`, `expr.Int`, `expr.Float`, `expr.Str`, `expr.Bool`, `expr.Int32`, `expr.Float32` |
+| `pl.lit(v)` | `golars.Lit(v)` | done | plus `LitInt64`/`LitFloat64`/`LitString`/`LitBool`; generic `expr.LitOf[T]` |
+| `pl.when(p).then(a).otherwise(b)` | `golars.When(p).Then(a).Otherwise(b)` | done | executor uses compute.Where with dtype promotion |
+| `pl.sum(col)`, `mean`, `min`, `max`, `count`, `first`, `last`, `median`, `std`, `var` | `golars.Sum(col)` and friends | done | col-scoped agg sugar |
+| `pl.read_csv` | `golars.ReadCSV` | done | |
+| `pl.read_parquet` | `golars.ReadParquet` | done | |
+| `pl.read_ipc` / `read_arrow` | `golars.ReadIPC` | done | |
+| `pl.read_json` / `read_ndjson` | `golars.ReadJSON` / `golars.ReadNDJSON` | done | |
+| `pl.read_database` | `io/sql.ReadSQL` | done | |
+| `pl.read_clipboard` | `io/clipboard.Read` | done | CSV transport |
+| `pl.read_avro` |  | todo | defer |
+| `pl.read_excel` |  | todo | needs xuri/excelize dep |
+| `pl.read_delta` / `read_iceberg` |  | todo | RFC required |
+| `pl.scan_csv` | `io/csv.Scan` | done | LazyFrame source |
+| `pl.scan_parquet` | `io/parquet.Scan` | done | |
+| `pl.scan_ipc` | `io/ipc.Scan` | done | |
+| `pl.scan_ndjson` | `io/json.ScanNDJSON` | done | |
+
+## DataFrame methods
+
+| polars | golars | Status |
+|---|---|---|
+| `df.shape` | `df.Shape()` | done |
+| `df.height` / `.width` | `df.Height()` / `.Width()` | done |
+| `df.columns` | `df.ColumnNames()` | done |
+| `df.dtypes` | `df.DTypes()` | done |
+| `df.schema` | `df.Schema()` | done |
+| `df.is_empty` | `df.IsEmpty()` | done |
+| `df.estimated_size` | `df.EstimatedSize()` | done |
+| `df.equals` | `df.Equals(other)` | done |
+| `df.glimpse` | `df.Glimpse(n)` | done |
+| `df.head` / `.tail` / `.limit` | `df.Head` / `.Tail` / `.Limit` | done |
+| `df.slice` | `df.Slice(offset, length)` | done |
+| `df.select(exprs)` | `df.Select(names...)` / `golars.SelectExpr(ctx, df, exprs...)` | done |
+| `df.with_columns(exprs)` | `df.WithColumns(series...)` / `golars.WithColumnsExpr(ctx, df, exprs...)` | done |
+| `df.with_column` | `df.WithColumn(series)` | done |
+| `df.rename` | `df.Rename(old, new)` | done |
+| `df.drop` | `df.Drop(names...)` | done |
+| `df.filter(mask)` | `df.Filter(ctx, mask)` | done |
+| `df.sort(by)` | `df.Sort` / `.SortBy` | done |
+| `df.reverse` | `df.Reverse(ctx)` | done |
+| `df.sample(n)` | `df.Sample(ctx, n, replacement, seed)` | done |
+| `df.shuffle` | `df.Shuffle(ctx, seed)` | done |
+| `df.clone` | `df.Clone()` | done |
+| `df.clear` | `df.Clear()` | done |
+| `df.group_by(...).agg(...)` | `df.GroupBy(...).Agg(ctx, [expr...])` | done |
+| `df.join(other, on, how)` | `df.Join(ctx, right, on, how)` | done |
+| `df.vstack` / `.hstack` | `df.VStack(other)` / `df.HStack(other)` | done |
+| `df.concat` | top-level `dataframe.Concat(...)` | done |
+| `df.describe` | `df.Describe(ctx)` | done |
+| `df.null_count` | `df.NullCount()` | done |
+| `df.row(i)` | `df.Row(i)` | done |
+| `df.rows()` | `df.Rows()` | done |
+| `df.to_dict` | `df.ToMap()` | done |
+| `df.to_arrow` / `to_pandas` | `df.ToArrow()` / `df.ToArrowTable()` | done (n/a for pandas) |
+| `df.write_csv` / `write_parquet` / `write_ipc` / `write_json` / `write_ndjson` | `io/*.WriteFile(ctx, path, df, ...)` | done |
+| `df.gather(indices)` | `df.Gather(ctx, indices)` | done |
+| `df.pivot` | `df.Pivot(ctx, index, on, values, PivotAgg)` | done |
+| `df.unpivot` (melt) | `df.Unpivot(ctx, idVars, valueVars)` | done |
+| `df.transpose` | `df.Transpose(ctx, headerCol, prefix)` | done (numeric/bool) |
+| `df.partition_by` | `df.PartitionBy(ctx, keys...)` | done |
+| `df.top_k` / `df.bottom_k` | `df.TopK(ctx, k, col)` / `df.BottomK(ctx, k, col)` | done |
+| `df.pipe(fn)` | `df.Pipe(fn)` | done |
+| `df.corr` / `df.cov` | `df.Corr(ctx)` / `df.Cov(ctx, ddof)` | done |
+| `df.explode` | `df.Explode(ctx, col)` | done | list-typed column; null/empty lists become a single null row |
+| `df.unnest` | `df.Unnest(ctx, col)` | done | struct-typed column; field names must not collide with existing cols |
+| `df.upsample` | `df.Upsample(ctx, col, every)` | done | timestamp col must be sorted; intervals: `ns`/`us`/`ms`/`s`/`m`/`h`/`d`/`w` |
+
+## Series methods
+
+### Inspection
+
+| polars | golars | Status |
+|---|---|---|
+| `s.dtype` | `s.DType()` | done |
+| `s.name` | `s.Name()` | done |
+| `s.len` | `s.Len()` | done |
+| `s.null_count` | `s.NullCount()` | done |
+| `s.has_nulls` | `s.HasNulls()` | done |
+| `s.is_empty` | `s.IsEmpty()` | done |
+| `s.n_chunks` | `s.NumChunks()` | done |
+| `s.n_unique` | `s.NUnique()` | done |
+| `s.is_sorted` | `s.IsSorted(order)` | done |
+
+### Math (scalar)
+
+| polars | golars | Status |
+|---|---|---|
+| `s.abs` | `s.Abs()` | done |
+| `s.sqrt` | `s.Sqrt()` | done |
+| `s.exp` | `s.Exp()` | done |
+| `s.log` | `s.Log()` | done |
+| `s.log2` / `log10` | `s.Log2` / `.Log10` | done |
+| `s.sin` / `cos` / `tan` | `s.Sin` / `.Cos` / `.Tan` | done |
+| `s.round(d)` | `s.Round(d)` | done |
+| `s.floor` / `ceil` | `s.Floor` / `.Ceil` | done |
+| `s.sign` | `s.Sign()` | done |
+| `s.clip(lo, hi)` | `s.Clip(lo, hi)` | done |
+| `s.pow(exp)` | `s.Pow(exp)` | done |
+
+### Aggregations (scalar-returning)
+
+| polars | golars | Status |
+|---|---|---|
+| `s.sum` | `s.Sum()` | done |
+| `s.mean` | `s.Mean()` | done |
+| `s.min` / `max` | `s.Min()` / `.Max()` | done |
+| `s.median` | `s.Median()` | done |
+| `s.std` / `var` | `s.Std()` / `.Var()` | done |
+| `s.quantile(q)` | `s.Quantile(q)` | done |
+| `s.any` / `all` | `s.Any()` / `.All()` | done |
+| `s.product` | `s.Product()` | done |
+
+### Position / argsort
+
+| polars | golars | Status |
+|---|---|---|
+| `s.arg_min` / `arg_max` | `s.ArgMin()` / `.ArgMax()` | done |
+| `s.arg_sort` | `s.ArgSort()` | done |
+| `s.top_k(k)` / `bottom_k` | `s.TopK(k)` / `.BottomK(k)` | done |
+
+### Transform
+
+| polars | golars | Status |
+|---|---|---|
+| `s.head` / `tail` | `s.Head` / `.Tail` | done |
+| `s.slice` | `s.Slice` | done |
+| `s.reverse` | `s.Reverse` | done |
+| `s.sample` | `s.Sample` | done |
+| `s.shuffle` | `s.Shuffle` | done |
+| `s.sort` | `compute.Sort(ctx, s, opts)` | done |
+| `s.unique` | `s.Unique()` | done |
+| `s.value_counts` | `s.ValueCounts(sort)` | done |
+| `s.rename` / `alias` | `s.Rename(name)` | done |
+| `s.clone` | `s.Clone()` | done |
+| `s.cast` | `compute.Cast(ctx, s, dt)` | done |
+| `s.rechunk` / `chunks` | `s.Rechunk()` / `s.Chunk(i)` / `.Chunked()` | done |
+
+### Null handling
+
+| polars | golars | Status |
+|---|---|---|
+| `s.is_null` / `is_not_null` | `s.IsNull()` / `.IsNotNull()` | done |
+| `s.is_nan` / `is_finite` / `is_infinite` | `s.IsNaN()` / `.IsFinite()` / `.IsInfinite()` | done |
+| `s.fill_null(v)` | `s.FillNull(v)` | done |
+| `s.drop_nulls` | `s.DropNulls()` | done |
+
+### Cumulative
+
+| polars | golars | Status |
+|---|---|---|
+| `s.cum_sum` | `s.CumSum()` | done |
+| `s.cum_min` / `cum_max` | `s.CumMin()` / `.CumMax()` | done |
+| `s.cum_prod` | `s.CumProd()` | done |
+| `s.cum_count` | `s.CumCount()` | done |
+| `s.diff(periods)` | `s.Diff(periods)` | done |
+| `s.shift(periods)` | `s.Shift(periods)` | done |
+| `s.pct_change(periods)` | `s.PctChange(periods)` | done |
+| `s.mode` | `s.Mode()` | done |
+
+### Rolling / windowed
+
+| polars | golars | Status |
+|---|---|---|
+| `s.rolling_sum` / `rolling_mean` / `rolling_min` / `rolling_max` / `rolling_std` / `rolling_var` | matching methods with `RollingOptions` | done |
+| `s.ewm_mean` / `s.ewm_var` / `s.ewm_std` | `s.EWMMean(alpha)` / `.EWMVar(alpha)` / `.EWMStd(alpha)` | done | adjusted form; integer inputs promote to float64 |
+
+### String namespace (`s.str.*`)
+
+| polars | golars | Status |
+|---|---|---|
+| `str.len_bytes` / `len_chars` | `.Str().LenBytes()` / `.LenChars()` | done |
+| `str.to_uppercase` / `to_lowercase` | `.Str().Upper()` / `.Lower()` | done |
+| `str.title` | `.Str().Title()` | done |
+| `str.contains` | `.Str().Contains(sub)` | done |
+| `str.starts_with` / `ends_with` | `.Str().StartsWith()` / `.EndsWith()` | done |
+| `str.replace` / `replace_all` | `.Str().Replace()` / `.ReplaceAll()` | done |
+| `str.strip_chars` | `.Str().Trim()` / `.LStrip()` / `.RStrip()` | done |
+| `str.strip_prefix` / `strip_suffix` | `.Str().StripPrefix()` / `.StripSuffix()` | done |
+| `str.pad_start` / `pad_end` / `zfill` | `.Str().PadStart()` / `.PadEnd()` / `.ZFill()` | done |
+| `str.reverse` | `.Str().Reverse()` | done |
+| `str.slice` | `.Str().Slice(start, len)` | done |
+| `str.count_matches` | `.Str().CountMatches()` | done |
+| `str.concat` | `.Str().Concat()` / `.Str().Prefix()` | done |
+| `str.extract` | `.Str().Extract(pattern, group)` | done |
+| `str.contains_regex` / `count_matches_regex` / `replace_regex` | matching `.Str().*Regex` | done |
+| `str.split_exact` | `.Str().SplitExact(sep)` (List<String>) / `.Str().SplitN(sep, idx)` / `.Str().SplitExactNullShort(sep, idx)` | done |
+
+### Arrow interop
+
+| polars | golars | Status |
+|---|---|---|
+| `s.to_arrow` | `s.ToArrow()` / `s.ToArrowChunked()` | done |
+| `pl.from_arrow(arr)` | `series.FromArrowArray` / `FromArrowChunked` | done |
+| `df.to_arrow` | `df.ToArrow()` / `df.ToArrowTable()` | done |
+| `pl.from_arrow(tbl)` | `dataframe.FromArrowTable(tbl)` | done |
+
+## Expr methods
+
+| polars | golars | Status |
+|---|---|---|
+| `pl.col(x)` with `+ - * /` | `Col(x).Add/Sub/Mul/Div(...)` | done |
+| `== != < <= > >=` | `Eq/Ne/Lt/Le/Gt/Ge` | done |
+| `and / or / not` | `And / Or / Not` | done |
+| `.alias(name)` | `.Alias(name)` | done |
+| `.cast(dt)` | `.Cast(dt)` | done |
+| `.is_null` / `.is_not_null` | `.IsNull()` / `.IsNotNull()` | done |
+| `.sum .mean .min .max .count .first .last .null_count` | matching methods | done |
+| `.median .std .var .any .all .product .quantile` | matching methods | done |
+| `.abs .sqrt .exp .log .log2 .log10 .sin .cos .tan .sign` | matching methods | done |
+| `.round(d) .floor .ceil .clip(lo, hi) .pow(x)` | matching methods | done |
+| `.fill_null(v)` | `.FillNull(v)` / `.FillNullExpr(e)` | done |
+| `.reverse .head(n) .tail(n) .slice(off, len) .shift(p)` | matching methods | done |
+| `.between(lo, hi)` | `.Between(lo, hi)` | done |
+| `.is_in([...])` | `.IsIn(v...)` | done |
+| `.over(partition)` | `.Over(keys...)` | done (scalar-agg fast path + generic gather-eval-scatter) |
+| `.sort` | `.Sort(desc)` (fluent via FunctionNode) | done |
+| `.rank(method)` | `.Rank(method)` | done |
+| `.rolling_sum` / `.rolling_mean` / ... | matching `.Rolling*(size, minPeriods)` | done |
+| `.ewm_mean` / `.ewm_var` / `.ewm_std` | matching `.EWM*(alpha)` | done |
+
+## LazyFrame methods
+
+| polars | golars | Status |
+|---|---|---|
+| `lf.filter` / `.select` / `.with_columns` | `lf.Filter / .Select / .WithColumns` | done |
+| `lf.with_column` | `lf.WithColumn(expr)` | done |
+| `lf.sort / .group_by / .agg / .join` | matching | done |
+| `lf.slice / .head / .limit / .tail` | matching | done |
+| `lf.reverse` | `lf.Reverse()` | done |
+| `lf.unique` | `lf.Unique()` | done |
+| `lf.drop / .rename` | matching | done |
+| `lf.collect` / `.collect_unoptimized` | matching | done |
+| `lf.explain / .show_graph` | `lf.Explain()` / `lf.ExplainTree()` / `lf.ShowGraph()` | done | `ShowGraph` emits Mermaid; the REPL `.graph` command adds lipgloss colouring |
+| `lf.sink_csv / sink_parquet / sink_ipc / sink_ndjson` | `lf.Sink(ctx, writer)` plus `io/*.WriteFile` in writer | done |
+
+## dtype
+
+| polars | golars | Status |
+|---|---|---|
+| Bool, Int8, Int16, Int32, Int64, UInt8 through UInt64, Float32, Float64 | `dtype.Bool()`, `dtype.Int64()` and friends | done |
+| String / Utf8 | `dtype.String()` | done |
+| Binary | `dtype.Binary()` | done |
+| Null | `dtype.Null()` | done |
+| Date / Datetime(unit, tz) / Duration / Time | `dtype.Date / Datetime / Duration / Time` + `series.FromTime` | done |
+| List(inner) / Array / Struct / Field | `dtype.List / FixedList / Struct` + `series.{ListOps, StructOps}` | done |
+| Categorical / Enum |  | todo |
+| Decimal / Float16 / Int128 |  | todo |
+| Object / Unknown |  | todo (polars-internal) |
+
+See [roadmap.md](roadmap.md) for the phased delivery plan and
+[`bench/polars-compare/`](../bench/polars-compare/) for current
+throughput ratios vs polars 1.39.

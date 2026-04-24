@@ -1,0 +1,16 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "index",
+    "getting-started",
+    "cookbook",
+    "scripting",
+    "sql",
+    "mcp",
+    "api-surface",
+    "api-design",
+    "architecture",
+    "memory-model",
+    "parallelism"
+  ]
+}

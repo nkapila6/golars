@@ -1,0 +1,166 @@
+# goreleaser config for golars.
+# Cut a release by pushing a semver tag:
+#   git tag v0.1.0 && git push origin v0.1.0
+# The release workflow under .github/workflows/release.yml invokes
+# `goreleaser release --clean` which consumes this file.
+
+version: 2
+
+project_name: golars
+
+before:
+  hooks:
+    - go mod tidy
+    - go mod download
+
+builds:
+  - id: golars
+    main: ./cmd/golars
+    binary: golars
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.version={{ .Version }}
+
+  - id: golars-mcp
+    main: ./cmd/golars-mcp
+    binary: golars-mcp
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.version={{ .Version }}
+
+  - id: golars-lsp
+    main: ./cmd/golars-lsp
+    binary: golars-lsp
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.version={{ .Version }}
+
+archives:
+  - id: default
+    ids: [golars, golars-mcp, golars-lsp]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_
+      {{- if eq .Os "darwin" }}Darwin
+      {{- else if eq .Os "linux" }}Linux
+      {{- else if eq .Os "windows" }}Windows
+      {{- else }}{{ .Os }}{{ end }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    wrap_in_directory: true
+    files:
+      - README.md
+      - LICENSE
+      - NOTICE
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+snapshot:
+  version_template: "{{ .Tag }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+      - "^vhs:"
+      - "Merge pull request"
+      - "Merge branch"
+
+release:
+  draft: false
+  prerelease: auto
+  name_template: "golars {{ .Tag }}"
+  header: |
+    ## golars {{ .Tag }}
+
+    Pure-Go DataFrames built on Apache Arrow. Binaries below cover
+    linux / macOS / windows on amd64 + arm64.
+  footer: |
+    ## Install
+
+    **Homebrew (macOS/Linux):**
+    ```sh
+    brew install Gaurav-Gosain/tap/golars
+    ```
+
+    **go install (any platform with Go 1.25+):**
+    ```sh
+    go install github.com/Gaurav-Gosain/golars/cmd/golars@{{ .Tag }}
+    ```
+
+    **Direct download:** grab the archive below for your os/arch,
+    extract, and drop `golars` / `golars-mcp` / `golars-lsp` on your
+    PATH.
+
+brews:
+  - name: golars
+    ids: [default]
+    homepage: https://golars.gaurav.zip
+    description: "Pure-Go DataFrames modeled on polars. Eager + lazy + streaming, no cgo."
+    license: MIT
+    repository:
+      owner: Gaurav-Gosain
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    install: |
+      bin.install "golars"
+      bin.install "golars-lsp"
+      bin.install "golars-mcp"
+    test: |
+      system "#{bin}/golars", "version"
+
+aurs:
+  - name: golars-bin
+    ids: [default]
+    homepage: https://github.com/Gaurav-Gosain/golars
+    description: "Pure-Go DataFrames modeled on polars. Eager + lazy + streaming, no cgo."
+    maintainers:
+      - "Gaurav Gosain <a77x86@gmail.com>"
+    license: MIT
+    private_key: "{{ .Env.AUR_SSH_KEY }}"
+    git_url: "ssh://aur@aur.archlinux.org/golars-bin.git"
+    provides:
+      - golars
+      - golars-lsp
+      - golars-mcp
+    conflicts:
+      - golars
+    package: |
+      install -Dm755 "./golars"     "${pkgdir}/usr/bin/golars"
+      install -Dm755 "./golars-lsp" "${pkgdir}/usr/bin/golars-lsp"
+      install -Dm755 "./golars-mcp" "${pkgdir}/usr/bin/golars-mcp"
+      install -Dm644 "./LICENSE"    "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+      install -Dm644 "./NOTICE"     "${pkgdir}/usr/share/licenses/${pkgname}/NOTICE"

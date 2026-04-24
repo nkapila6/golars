@@ -1,0 +1,84 @@
+# Memory model
+
+A columnar analytics library lives or dies by how it manages memory. Go's garbage collector is capable but unforgiving of allocation-heavy hot loops. This document describes the rules golars follows to keep memory predictable.
+
+## Buffer ownership
+
+All column data ultimately sits in `memory.Buffer` (from arrow-go). A buffer is a reference-counted, opaque handle to a contiguous byte region. We never copy buffer contents when we can share them.
+
+Reference counting rules:
+
+- Creating a `Series` from an `arrow.Array` retains the array's buffers.
+- Cloning a `Series` shares buffers, not copies them.
+- Slicing a `Series` shares buffers with an offset and length.
+- A `DataFrame` holds retains on every Series it owns.
+- Release happens through `Series.Release()` and `DataFrame.Release()`. Without an explicit release, the GC collects the wrapper and the underlying arrow buffer release runs via a finalizer. Finalizers are a safety net, not the intended path. Release explicitly in tight loops.
+
+## Allocator
+
+Every Series, array, and kernel output is allocated through a `memory.Allocator`. The default is `memory.DefaultAllocator`. For benchmarks and tests we use `memory.NewCheckedAllocator` which panics on unreleased buffers. Every test that constructs Series must use a checked allocator and verify zero leaks at teardown.
+
+Allocator choice flows through a `ctx.Context` in plan execution. Expression evaluation takes the allocator from the surrounding execution context, not from a global.
+
+## Immutability
+
+`Series` and `DataFrame` are immutable to the user. Every mutating-looking method returns a new value. Under the hood we exploit ref-counted buffer sharing so that `df.Rename("a", "b")` is O(1) and does not copy column data.
+
+This buys us a few things:
+
+- Safe concurrent reads without locks.
+- Easier reasoning about plan transformations.
+- The optimizer can reorder and eliminate subplans without worrying about side effects.
+
+## The chunked model
+
+A Series is a sequence of chunks. Each chunk is an `arrow.Array` of the same dtype. Properties:
+
+- All chunks share one dtype and one validity bitmap format.
+- Total length is the sum of chunk lengths.
+- Chunk boundaries are an implementation detail. Kernels must not depend on specific chunk sizes for correctness, only for scheduling.
+
+Why chunks:
+
+- Natural unit of parallelism.
+- Natural unit of streaming (a morsel is a DataFrame-shaped collection of chunks, one per column).
+- Enables append-without-copy: appending two Series concatenates chunk lists instead of copying.
+
+The downside is that kernels must iterate over chunks. We mitigate this with a `series.Iter()` helper that yields `(chunk arrow.Array, offset int)` pairs.
+
+## Null masks
+
+Arrow's validity bitmap is one bit per row, ones for valid, zeros for null. golars never materializes a null to a sentinel value. All kernels operate on `(data, bitmap)` pairs. Aggregations skip null positions. Comparisons propagate null per polars' semantics: `null == null` is null, `null < 1` is null, and so on.
+
+Bitmaps are shared via buffer refcounts just like data buffers.
+
+## Hot-loop allocation rules
+
+Performance work follows a small set of rules:
+
+1. **No allocation in inner loops.** Pre-allocate result buffers sized to the input. Use `memory.Allocator.Allocate(n)` once per chunk, not per row.
+2. **No interface boxing in inner loops.** Hot kernels dispatch on dtype once at the outer level and then work on concrete `[]T` slices. We rely on generated code (`go generate`) to produce dtype-specialized kernels rather than paying interface dispatch cost per row.
+3. **No map operations in inner loops.** Hash tables used by groupby and join are dedicated open-addressing implementations under `internal/hash`. No `map[K]V` in aggregation critical paths.
+4. **Reuse buffers across morsels.** The streaming executor keeps a free-list of `memory.Buffer` per operator and reuses them across morsels where size permits.
+5. **Bounded per-operator memory.** Operators declare a memory budget and spill to disk when they exceed it.
+
+## Cross-operator sharing
+
+Projection pushdown and common subexpression elimination mean that the same underlying column appears in multiple operator outputs. We never copy: the output Series of a projection shares buffers with the input. Refcounting ensures correctness.
+
+## GC pressure management
+
+Go's GC is concurrent and low-latency, but allocation pressure still drives pause frequency and throughput cost. golars keeps pressure low by:
+
+- Working in large `[]T` slices instead of many small objects.
+- Using `sync.Pool` for short-lived per-morsel scratch buffers (hash temp arrays, partition index buffers).
+- Avoiding string allocation on the hot path. String columns are kept in arrow's native offset-plus-buffer layout and operated on as byte slices.
+- Keeping the `Chunk` struct small (a few pointers) so that slices of chunks fit in cache.
+
+We run the test suite under `GODEBUG=gctrace=1` in CI and watch for surprise allocation.
+
+## A note on off-heap
+
+We do not use off-heap memory (mmap backed by anonymous regions) by default. arrow-go's `memory.GoAllocator` returns Go-managed slices. We switch to `memory.CgoArrowAllocator` only if profiling shows GC overhead is a problem on real workloads, and only if we decide to relax the no-cgo constraint. For now, staying on-heap is simpler and fast enough.
+
+Spill-to-disk for OOC is different and uses mmap on regular files. That is not off-heap allocation; that is swapping to disk.

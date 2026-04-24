@@ -1,0 +1,56 @@
+# Build output.
+/bin/
+/dist/
+/result
+*.test
+*.out
+*.prof
+*.pprof
+*.trace
+
+# Coverage.
+coverage.txt
+coverage.html
+*.cov
+
+# Binaries that land at repo root. Built via go install / Makefile /
+# goreleaser; never commit the artifact.
+/golars
+/golars-lsp
+/golars-mcp
+/golars-bench
+/golars-bench-simd
+/golars.exe
+/golars-lsp.exe
+/golars-mcp.exe
+
+# Go module vendor. Regenerate with `go mod vendor` if needed.
+/vendor/
+
+# Local test / scratch.
+/testdata/tmp/
+.tmp/
+
+# Reference polars checkout. Kept locally for parity tests; attribution
+# lives in NOTICE, sources are not committed.
+/polars/
+
+# Nix / direnv.
+.direnv/
+.envrc
+
+# Editors / OS.
+.idea/
+.vscode/
+.claude/
+*.swp
+*~
+.DS_Store
+
+# nvim plugin local state.
+/editors/nvim-golars/.luarc.json
+
+# Bench artifacts.
+/bench/polars-rust/target/
+/bench/polars-compare/__pycache__/
+/bench/polars-compare/.venv/
