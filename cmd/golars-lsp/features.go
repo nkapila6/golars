@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/Gaurav-Gosain/golars/script"
@@ -525,13 +526,20 @@ func frameCompletions(current string, doc *document) []completionItem {
 }
 
 // docDir parses a `file://…` URI into a local directory path; returns
-// "" if the URI is non-file or unparseable.
+// "" if the URI is non-file or unparseable. Windows file URIs follow
+// the `file:///C:/...` shape where url.URL.Path keeps the leading
+// slash; strip it so filepath.Dir returns a native drive-prefixed
+// path rather than `/C:/...`.
 func docDir(d *document) string {
 	u, err := url.Parse(d.uri)
 	if err != nil || u.Scheme != "file" {
 		return ""
 	}
-	return filepath.Dir(u.Path)
+	p := u.Path
+	if runtime.GOOS == "windows" && len(p) >= 3 && p[0] == '/' && p[2] == ':' {
+		p = p[1:]
+	}
+	return filepath.Dir(p)
 }
 
 // --------------------------------------------------------------------
