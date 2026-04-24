@@ -12,4 +12,4 @@ languages = ["golars"]
 
 [grammars.golars]
 repository = "https://github.com/nkapila6/tree-sitter-golars"
-commit = "ab6cc9593842cac51a4465a9a0d71f3cafd5afd4"
+commit = "5dbee45082cfd1c0471204a5ae33a48975afa757"
