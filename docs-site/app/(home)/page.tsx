@@ -16,8 +16,7 @@ export default function HomePage() {
           <img
             src="/golars.png"
             alt="golars"
-            className="mx-auto max-w-full h-auto rounded-xl shadow-2xl"
-            style={{ maxWidth: "720px" }}
+            className="mx-auto w-full max-w-[720px] h-auto rounded-xl shadow-2xl"
           />
         </div>
 
