@@ -38,6 +38,7 @@ detect_extensions_dir() {
 }
 
 EXTENSIONS_DIR=$(detect_extensions_dir)
+TEMP_DIR=$(mktemp -d)
 INSTALL_DIR="$EXTENSIONS_DIR/golars"
 
 echo "Installing golars Zed extension..."
@@ -53,17 +54,16 @@ if [ -d "$INSTALL_DIR" ]; then
     rm -rf "$INSTALL_DIR"
 fi
 
-# Clone the extension
+# Clone to temp directory
 echo "Cloning extension from $REPO_URL..."
-git clone --depth 1 --filter=blob:none --sparse "$REPO_URL" "$INSTALL_DIR"
+git clone --depth 1 "$REPO_URL" "$TEMP_DIR"
 
-# Sparse checkout only the extension directory
-cd "$INSTALL_DIR"
-git sparse-checkout set "$EXTENSION_DIR"
+# Create install directory and copy extension files
+mkdir -p "$INSTALL_DIR"
+cp -r "$TEMP_DIR/$EXTENSION_DIR"/* "$INSTALL_DIR/"
 
-# Move extension files to root of install directory
-mv "$EXTENSION_DIR"/* .
-rm -rf "$EXTENSION_DIR"
+# Clean up temp directory
+rm -rf "$TEMP_DIR"
 
 echo ""
 echo "golars Zed extension installed successfully!"
