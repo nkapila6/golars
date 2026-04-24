@@ -23,11 +23,18 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      # AUR push uses a private SSH key registered at aur.archlinux.org.
+      # When the secret is missing we pass --skip=aur so the release
+      # still goes through and the brew tap update still runs.
       - name: run goreleaser
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
-          args: release --clean
+          args: >-
+            release --clean
+            ${{ secrets.AUR_SSH_KEY == '' && '--skip=aur' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
