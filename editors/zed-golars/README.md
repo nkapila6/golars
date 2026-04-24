@@ -9,9 +9,7 @@ Syntax highlighting, LSP client, and editor features for the golars `.glr` scrip
 - **Language Server**: Uses `stdio` transport to communicate with the `golars-lsp` binary
 - **Editor Features**: Comment toggling, bracket matching, code outline
 
-## Installation
-
-### Prerequisites
+## Prerequisites
 
 Install the language server binary:
 
@@ -19,23 +17,24 @@ Install the language server binary:
 go install github.com/Gaurav-Gosain/golars/cmd/golars-lsp@latest
 ```
 
-### Quick Install (One-liner)
+## Installation
+
+### Quick Setup (curl)
+
+This script downloads the extension source to your machine. You then install it as a dev extension in Zed:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Gaurav-Gosain/golars/main/install-zed-extension.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Gaurav-Gosain/golars/main/editors/zed-golars/install.sh | bash
 ```
 
-This clones the extension directly to Zed's extensions directory. Restart Zed to activate.
+After the download completes, open Zed: **Extensions** → **Install Dev Extension** → select the printed directory path.
 
-### Dev Extension (for local development)
+### Manual Dev Extension
 
 1. Open Zed
-2. Go to Extensions → Install Dev Extension
-3. Select `editors/zed-golars/` from this repository
-
-### From Zed Extension Registry
-
-(Coming soon - pending PR to zed-industries/extensions)
+2. Go to **Extensions** (`Cmd+Shift+X` / `Ctrl+Shift+X`)
+3. Click **"Install Dev Extension"**
+4. Navigate to and select the `editors/zed-golars/` directory from this repository
 
 ## Configuration
 
@@ -74,11 +73,17 @@ zed-golars/
 
 ## Development
 
-To build the extension:
+To build the extension locally:
 
 ```bash
 cd editors/zed-golars
 cargo build --target wasm32-wasip1 --release
+```
+
+To debug, launch Zed with verbose logging:
+
+```bash
+zed --foreground
 ```
 
 ## Grammar Source

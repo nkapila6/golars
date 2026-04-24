@@ -203,9 +203,10 @@ Tree-sitter grammar + Neovim plugin live under
 [`editors/`](editors/). VS Code extension at
 [`editors/vscode-golars`](editors/vscode-golars/).
 
-**Zed**: Install via curl:
+**Zed**: download the extension source, then install as a dev extension:
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Gaurav-Gosain/golars/main/install-zed-extension.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Gaurav-Gosain/golars/main/editors/zed-golars/install.sh | bash
+# Then in Zed: Extensions → Install Dev Extension → select the downloaded directory
 ```
 
 ### Model Context Protocol server
